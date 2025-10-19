@@ -1,0 +1,23 @@
+[project]
+name = "sps-genai"
+version = "0.1.0"
+description = "CIFAR + FastAPI + Bigram/Embedding Service"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "fastapi[standard]>=0.115.0",  
+  "pydantic>=2.11.0",
+  "torch==2.4.*",
+  "torchvision==0.19.*",
+  "Pillow>=10.4.0",
+  "numpy>=1.26.4,<2.1",
+  "spacy>=3.7.4,<3.9",
+  "urllib3<2.3",
+  "tqdm>=4.66.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "jupyter>=1.1.1"
+]
