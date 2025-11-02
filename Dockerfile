@@ -13,19 +13,23 @@ ENV PATH="/root/.local/bin/:$PATH"
 # Workdir
 WORKDIR /code
 
-# Dependencies first (cache-friendly)
+# ---- deps (cache-friendly) ----
 COPY pyproject.toml uv.lock /code/
 RUN uv sync --frozen
 
-# Install spaCy model INTO THE UV ENV
+# spaCy 模型装进 uv 的虚拟环境
 RUN uv pip install \
-    https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl
+  https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl
 
-# App code
+# ---- app source ----
 COPY main.py /code/
 COPY app /code/app
+# ✅ 新增：把 helper_lib 也复制进去（GAN/CNN 都在这里）
+COPY helper_lib /code/helper_lib
 
-RUN mkdir -p /code/dat
+# ✅ 修正：创建 data 目录（而不是 dat）；顺便把子目录建好
+RUN mkdir -p /code/data/gan /code/data/cifar
+
 EXPOSE 8000
 
 # Start

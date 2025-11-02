@@ -11,6 +11,10 @@ from io import BytesIO
 from PIL import Image
 from app.cifar_model import CifarClassifier
 
+from fastapi import BackgroundTasks
+from fastapi.responses import FileResponse, JSONResponse
+from helper_lib.main import train_gan_entry, sample_gan_entry
+
 app = FastAPI(title="Bigram + Embedding API")
 
 # Bigram
@@ -36,7 +40,7 @@ class TextReq(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "ok", "services": ["bigram", "embedding"]}
+    return {"status": "ok", "services": ["bigram", "embedding", "cifar", "gan"]}
 
 # Bigram endpoints
 @app.post("/generate")
@@ -109,3 +113,23 @@ async def predict_cifar(file: UploadFile = File(...)):
     img = Image.open(BytesIO(await file.read()))
     idx, prob = cifar.predict(img)
     return {"pred_index": idx, "pred_class": CIFAR_CLASSES[idx], "probabilities": prob}
+
+# GAN endpoints
+@app.post("/gan/train")
+def gan_train(background_tasks: BackgroundTasks,
+              epochs: int = 10, batch_size: int = 128, lr: float = 2e-4, beta1: float = 0.5, device: str = "cpu"):
+    def _job():
+        info = train_gan_entry(batch_size=batch_size, lr=lr, beta1=beta1, epochs=epochs, device=device)
+        print(f"[GAN] training finished, ckpt: {info['ckpt']}")
+    background_tasks.add_task(_job)
+    return {"message": "GAN training started", "epochs": epochs, "batch_size": batch_size, "lr": lr, "beta1": beta1, "device": device}
+
+@app.get("/gan/samples")
+def gan_samples(num_samples: int = 16, nrow: int = 4, device: str = "cpu",
+                ckpt: str = "data/gan/gan.pt", out_path: str = "data/gan/samples.png"):
+    info = sample_gan_entry(ckpt=ckpt, device=device, num_samples=num_samples, nrow=nrow, out_path=out_path)
+    img_path = info["image"] if isinstance(info, dict) else out_path
+    try:
+        return FileResponse(img_path, media_type="image/png", filename="gan_samples.png")
+    except Exception as e:
+        return JSONResponse({"error": f"failed to return image: {e}"}, status_code=500)
