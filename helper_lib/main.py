@@ -140,3 +140,46 @@ if __name__ == "__main__":
     )
     print(f"✅ CNN checkpoint saved to: {info['ckpt']}")
 
+# for energy model
+from .energy_model import train_energy, sample_energy
+
+def train_energy_entry(batch_size=128, lr=1e-4, epochs=5, device="cpu"):
+    return train_energy(batch_size=batch_size, lr=lr, epochs=epochs, device=device)
+
+def sample_energy_entry(device="cpu",
+                        ckpt="data/energy/energy.pt",
+                        num_samples=16,
+                        steps=60,
+                        step_size=0.1,
+                        out_path="data/energy/samples.png"):
+    return sample_energy(
+        device=device,
+        ckpt_path=ckpt,
+        num_samples=num_samples,
+        steps=steps,
+        step_size=step_size,
+        out_path=out_path,
+    )
+
+
+# for diffusion model
+from .diffusion_model import train_diffusion, sample_diffusion
+
+def train_diffusion_entry(batch_size=128, lr=2e-4, epochs=5, device="cpu"):
+    return train_diffusion(
+        batch_size=batch_size,
+        lr=lr,
+        epochs=epochs,
+        device=device,
+    )
+
+def sample_diffusion_entry(device="cpu",
+                           ckpt="data/diffusion/diffusion.pt",
+                           num_samples=16,
+                           out_path="data/diffusion/samples.png"):
+    return sample_diffusion(
+        device=device,
+        ckpt_path=ckpt,
+        num_samples=num_samples,
+        out_path=out_path,
+    )

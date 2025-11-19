@@ -13,7 +13,11 @@ from app.cifar_model import CifarClassifier
 
 from fastapi import BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from helper_lib.main import train_gan_entry, sample_gan_entry
+from helper_lib.main import (
+    train_gan_entry, sample_gan_entry,
+    train_energy_entry, sample_energy_entry,
+    train_diffusion_entry, sample_diffusion_entry
+)
 
 app = FastAPI(title="Bigram + Embedding API")
 
@@ -40,7 +44,7 @@ class TextReq(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "ok", "services": ["bigram", "embedding", "cifar", "gan"]}
+    return {"status": "ok", "services": ["bigram", "embedding", "cifar", "gan", "energy", "diffusion"]}
 
 # Bigram endpoints
 @app.post("/generate")
@@ -131,5 +135,94 @@ def gan_samples(num_samples: int = 16, nrow: int = 4, device: str = "cpu",
     img_path = info["image"] if isinstance(info, dict) else out_path
     try:
         return FileResponse(img_path, media_type="image/png", filename="gan_samples.png")
+    except Exception as e:
+        return JSONResponse({"error": f"failed to return image: {e}"}, status_code=500)
+
+# Energy Model endpoints
+@app.post("/energy/train")
+def energy_train(epochs: int = 5,
+                 batch_size: int = 128,
+                 lr: float = 1e-4,
+                 device: str = "cpu"):
+    info = train_energy_entry(
+        batch_size=batch_size,
+        lr=lr,
+        epochs=epochs,
+        device=device,
+    )
+    print(f"[EBM] training finished, ckpt: {info['ckpt']}")
+
+    return {
+        "message": "Energy model training finished",
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "lr": lr,
+        "device": device,
+        "ckpt": info["ckpt"],
+        "last_loss": info.get("loss"),
+    }
+
+@app.get("/energy/samples")
+def energy_samples(device: str = "cpu",
+                   ckpt: str = "data/energy/energy.pt",
+                   num_samples: int = 16,
+                   steps: int = 60,
+                   step_size: float = 0.1,
+                   out_path: str = "data/energy/samples.png"):
+    info = sample_energy_entry(
+        device=device,
+        ckpt=ckpt,
+        num_samples=num_samples,
+        steps=steps,
+        step_size=step_size,
+        out_path=out_path,
+    )
+    img_path = info["image"]
+    try:
+        return FileResponse(img_path, media_type="image/png", filename="energy_samples.png")
+    except Exception as e:
+        return JSONResponse({"error": f"failed to return image: {e}"}, status_code=500)
+
+
+# Diffusion Model endpoints
+@app.post("/diffusion/train")
+def diffusion_train(epochs: int = 5,
+                    batch_size: int = 128,
+                    lr: float = 2e-4,
+                    device: str = "cpu"):
+    info = train_diffusion_entry(
+        batch_size=batch_size,
+        lr=lr,
+        epochs=epochs,
+        device=device,
+    )
+    print(f"[DDPM] training finished, ckpt: {info['ckpt']}")
+
+    return {
+        "message": "Diffusion model training finished",
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "lr": lr,
+        "device": device,
+        "ckpt": info["ckpt"],
+        "last_loss": info.get("loss"),
+    }
+
+@app.get("/diffusion/samples")
+def diffusion_samples(device: str = "cpu",
+                      ckpt: str = "data/diffusion/diffusion.pt",
+                      num_samples: int = 16,
+                      out_path: str = "data/diffusion/samples.png"):
+
+    info = sample_diffusion_entry(
+        device=device,
+        ckpt=ckpt,
+        num_samples=num_samples,
+        out_path=out_path,
+    )
+
+    img_path = info["image"]
+    try:
+        return FileResponse(img_path, media_type="image/png", filename="diffusion_samples.png")
     except Exception as e:
         return JSONResponse({"error": f"failed to return image: {e}"}, status_code=500)
